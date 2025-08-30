@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+
+data/input/
+data/intermediate/
+data/output/*.wav
+
+.DS_Store
+.vscode/

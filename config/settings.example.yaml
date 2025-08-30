@@ -1,0 +1,13 @@
+episode:
+  audio_url: "https://example.com/path/to/audio.mp3"
+  title: "セキュリティのアレ #YYYYMMDD"
+  date: "2025-08-25"
+output:
+  dir: "data/output"
+  basename: "are_20250825"
+transcribe:
+  model_size: "base"
+  language: "ja"
+  beam_size: 5
+  vad_frame_ms: 30
+  vad_aggressiveness: 2

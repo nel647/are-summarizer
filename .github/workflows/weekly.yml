@@ -1,0 +1,68 @@
+name: weekly-run
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Write settings.yaml
+        run: |
+          mkdir -p config
+          cat <<'YAML' > config/settings.yaml
+          episode:
+            audio_url: "${{ vars.AUDIO_URL }}"
+            title: "${{ vars.EPISODE_TITLE }}"
+            date: "${{ vars.EPISODE_DATE }}"
+          output:
+            dir: "data/output"
+            basename: "${{ vars.OUTPUT_BASENAME }}"
+          transcribe:
+            model_size: "base"
+            language: "ja"
+            beam_size: 5
+            vad_frame_ms: 30
+            vad_aggressiveness: 2
+          YAML
+
+      - name: Run pipeline
+        run: |
+          python -m src.are_summarizer.cli --config config/settings.yaml
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: outputs-${{ vars.OUTPUT_BASENAME }}
+          path: |
+            data/output/*.srt
+            data/output/*.txt
+            data/output/*_summary.md
+
+      - name: Commit outputs back to repo
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: add outputs for ${{ vars.OUTPUT_BASENAME }}"
+          file_pattern: data/output/*.srt data/output/*.txt data/output/*_summary.md

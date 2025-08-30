@@ -1,0 +1,61 @@
+name: manual-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      audio_url:
+        description: "Audio URL"
+        required: true
+      title:
+        description: "Episode Title"
+        required: true
+      date:
+        description: "Recorded Date (YYYY-MM-DD)"
+        required: true
+      basename:
+        description: "Output Basename"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Write settings.yaml
+        run: |
+          mkdir -p config
+          cat <<'YAML' > config/settings.yaml
+          episode:
+            audio_url: "${{ github.event.inputs.audio_url }}"
+            title: "${{ github.event.inputs.title }}"
+            date: "${{ github.event.inputs.date }}"
+          output:
+            dir: "data/output"
+            basename: "${{ github.event.inputs.basename }}"
+          transcribe:
+            model_size: "base"
+            language: "ja"
+            beam_size: 5
+            vad_frame_ms: 30
+            vad_aggressiveness: 2
+          YAML
+      - run: python -m src.are_summarizer.cli --config config/settings.yaml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: outputs-${{ github.event.inputs.basename }}
+          path: data/output/
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: add outputs for ${{ github.event.inputs.basename }}"
+          file_pattern: data/output/*.srt data/output/*.txt data/output/*_summary.md
