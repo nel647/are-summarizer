@@ -1,0 +1,29 @@
+name: manual-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      audio_url:
+        description: Audio URL
+        required: true
+      date:
+        description: Recording date
+        required: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run pipeline
+        run: python -m are_summarizer --audio-url "${{ inputs.audio_url }}" --date "${{ inputs.date }}" --output summary.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: summary
+          path: summary.txt
